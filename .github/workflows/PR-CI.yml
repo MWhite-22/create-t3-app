@@ -5,8 +5,7 @@ name: PR-CI
 on:
   # Check all pushes to the main branch (If a maintainer is directly pushing commits)
   push:
-    branches:
-      - main
+    branches: [main]
 
   # Run on all PRs on all branches
   pull_request:
@@ -15,14 +14,12 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Check that the PR meets code quality standards
   code-quality:
-    name: Run ESLint, Prettier, and TSC
+    name: Check Code Quality
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16, 18]
     steps:
-      - name: "Checkout"
+      - name: Checkout
         uses: actions/checkout@v2
 
       - name: Setup Pnpm
@@ -30,11 +27,11 @@ jobs:
         with:
           version: 7.2.1
 
-      - name: "Setup Node ${{ matrix.node-version }}"
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: "pnpm"
+          node-version: 16
+          cache: pnpm
 
       - name: Install Packages
         run: pnpm install
@@ -48,17 +45,28 @@ jobs:
       - name: Run Type Check
         run: tsc
 
+  # Check that the PR builds correctly
   build:
-    name: Build the project
+    name: Build create-t3-app
+    needs: code-quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: pnpm/action-setup@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Pnpm
+        uses: pnpm/action-setup@v2.2.2
         with:
           version: 7.2.1
-      - uses: actions/setup-node@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 16
-          cache: "pnpm"
-      - run: pnpm install
-      - run: pnpm build
+          cache: pnpm
+
+      - name: Install Packages
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
