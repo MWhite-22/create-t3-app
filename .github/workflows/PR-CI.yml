@@ -3,58 +3,51 @@
 name: PR-CI
 
 on:
+  # Check all pushes to the main branch (If a maintainer is directly pushing commits)
+  push:
+    branches:
+      - main
+
+  # Run on all PRs on all branches
   pull_request:
-    branches: "*"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Run ESLint
+  code-quality:
+    name: Run ESLint, Prettier, and TSC
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18]
     steps:
-      - uses: actions/checkout@v2
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 7.2.1
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-          cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm lint:check
-      
-  prettier:
-    name: Run Prettier Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 7.2.1
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-          cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm format:check
+      - name: "Checkout"
+        uses: actions/checkout@v2
 
-  tsc:
-    name: Run Type Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: pnpm/action-setup@v2
+      - name: Setup Pnpm
+        uses: pnpm/action-setup@v2.2.2
         with:
           version: 7.2.1
-      - uses: actions/setup-node@v3
+
+      - name: "Setup Node ${{ matrix.node-version }}"
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
-          cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm typecheck
-      
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install Packages
+        run: pnpm install
+
+      - name: Run Prettier Check
+        run: pnpm format:check
+
+      - name: Run ESlint
+        run: pnpm lint:check
+
+      - name: Run Type Check
+        run: tsc
+
   build:
     name: Build the project
     runs-on: ubuntu-latest
@@ -66,6 +59,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-          cache: 'pnpm'
+          cache: "pnpm"
       - run: pnpm install
       - run: pnpm build
